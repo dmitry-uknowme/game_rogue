@@ -6,10 +6,7 @@ class Game {
   }
 
   init() {
-    this.level.renderWalls();
-    this.level.renderRooms();
-    this.level.renderPaths();
-    this.level.renderEffects();
+    this.level.init();
   }
 }
 
@@ -22,7 +19,8 @@ class GameLevelSettings {
     PATH_COUNT_MIN = 3,
     PATH_COUNT_MAX = 5,
     EFFECT_HEAL_MIN = 10,
-    EFFECT_STRONG_MIN = 2
+    EFFECT_STRONG_MIN = 2,
+    ENEMIES_COUNT_MIN = 10
   ) {
     this.ROOMS_COUNT_MIN = ROOMS_COUNT_MIN;
     this.ROOMS_COUNT_MAX = ROOMS_COUNT_MAX;
@@ -32,6 +30,7 @@ class GameLevelSettings {
     this.PATH_COUNT_MAX = PATH_COUNT_MAX;
     this.EFFECT_HEAL_MIN = EFFECT_HEAL_MIN;
     this.EFFECT_STRONG_MIN = EFFECT_STRONG_MIN;
+    this.ENEMIES_COUNT_MIN = ENEMIES_COUNT_MIN;
   }
 }
 
@@ -53,6 +52,15 @@ class GameLevel {
     this.tileWidth = width / tileXCount;
     this.tileHeight = height / tileYCount;
     this.settings = new GameLevelSettings();
+  }
+
+  init() {
+    this.renderWalls();
+    this.renderRooms();
+    this.renderPaths();
+    this.renderEffects();
+    this.renderEnemies();
+    this.renderPlayer();
   }
 
   renderWalls() {
@@ -139,6 +147,7 @@ class GameLevel {
         const currentNode =
           this.gameBoxNode.childNodes[startY * this.tileXCount + x];
         currentNode.className = pathObject.getObjectClassName();
+        // currentNode.style = pathObject.styleStr;
       }
     }
 
@@ -158,6 +167,7 @@ class GameLevel {
         const currentNode =
           this.gameBoxNode.childNodes[y * this.tileXCount + startX];
         currentNode.className = pathObject.getObjectClassName();
+        // currentNode.style = pathObject.styleStr;
       }
     }
   }
@@ -212,6 +222,52 @@ class GameLevel {
       }
     }
   }
+
+  renderEnemies() {
+    const count = this.settings.ENEMIES_COUNT_MIN;
+    let placed = 0;
+    while (placed < count) {
+      const y = randomInteger(0, this.tileYCount - 1);
+      const x = randomInteger(0, this.tileXCount - 1);
+      const current = this.objects[y][x];
+      if (current.type === GameObjectType.PATH) {
+        const obj = new GameObject(
+          x,
+          y,
+          this.tileWidth,
+          this.tileHeight,
+          GameObjectType.ENEMY
+        );
+        this.objects[y][x] = obj;
+        const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
+        tile.className = obj.getObjectClassName();
+        placed++;
+      }
+    }
+  }
+
+  renderPlayer() {
+    const count = 1;
+    let placed = 0;
+    while (placed < count) {
+      const y = randomInteger(0, this.tileYCount - 1);
+      const x = randomInteger(0, this.tileXCount - 1);
+      const current = this.objects[y][x];
+      if (current.type === GameObjectType.PATH) {
+        const obj = new GameObject(
+          x,
+          y,
+          this.tileWidth,
+          this.tileHeight,
+          GameObjectType.PLAYER
+        );
+        this.objects[y][x] = obj;
+        const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
+        tile.className = obj.getObjectClassName();
+        placed++;
+      }
+    }
+  }
 }
 
 class GameObjectType {
@@ -244,6 +300,10 @@ class GameObject {
       objectClassName = "tileHP";
     } else if (type === GameObjectType.WALL) {
       objectClassName = "tileW";
+    } else if (type === GameObjectType.ENEMY) {
+      objectClassName = "tileE";
+    } else if (type === GameObjectType.PLAYER) {
+      objectClassName = "tileP";
     }
     return objectClassName;
   }
@@ -254,6 +314,12 @@ class GameObject {
     return `<div class="${objectClassName}" style="width: ${this.tileWidth.toFixed(
       2
     )}px; height: ${this.tileHeight.toFixed(2)}px"></div>`;
+  }
+
+  styleStr() {
+    return `"width: ${this.tileWidth.toFixed(
+      2
+    )}px; height: ${this.tileHeight.toFixed(2)}px`;
   }
 }
 
