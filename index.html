@@ -69,18 +69,22 @@
       .field .tileE {
         background-image: url(images/tile-E.png);
         z-index: 10;
+        background-size: contain;
       }
       .field .tileP {
         background-image: url(images/tile-P.png);
         z-index: 10;
+        background-size: contain;
       }
       .field .tileHP {
         background-image: url(images/tile-HP.png);
         z-index: 9;
+        background-size: contain;
       }
       .field .tileSW {
         background-image: url(images/tile-SW.png);
         z-index: 9;
+        background-size: contain;
       }
       .field .tile .health {
         background-color: #ff0000;
@@ -98,6 +102,13 @@
         top: 0px;
         height: 3px;
       }
+      .layer-background {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-wrap: wrap;
+      }
+
       .inventory-box {
         border: 2px solid #d0d0d0;
         float: left;
@@ -116,6 +127,10 @@
   <body>
     <h1>Игровое поле</h1>
     <div class="field-box">
+      <!-- <div class="field">
+        <div class="layer-background"></div>
+        <div class="layer-gameplay"></div>
+      </div> -->
       <div class="field"></div>
     </div>
     <div class="cl"></div>

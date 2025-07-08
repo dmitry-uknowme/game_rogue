@@ -7,6 +7,7 @@ class Game {
 
   init() {
     this.level.init();
+    this.level.run();
   }
 }
 
@@ -54,6 +55,23 @@ class GameLevel {
     this.settings = new GameLevelSettings();
   }
 
+  run() {
+    // this.update();
+    // requestAnimationFrame(this.run.bind(this));
+    const now = performance.now();
+    const delta = now - (this.lastUpdateTime || 0);
+
+    const targetFPS = 30; // например, 10 кадров в секунду
+    const frameDuration = 1000 / targetFPS;
+
+    if (!this.lastUpdateTime || delta >= frameDuration) {
+      this.update();
+      this.lastUpdateTime = now;
+    }
+
+    requestAnimationFrame(this.run.bind(this));
+  }
+
   init() {
     this.renderWalls();
     this.renderRooms();
@@ -61,6 +79,21 @@ class GameLevel {
     this.renderEffects();
     this.renderEnemies();
     this.renderPlayer();
+  }
+
+  update() {
+    console.log("updateee");
+
+    // this.gameplayLayer.innerHTML = "";
+    for (let y = 0; y < this.objects.length; y++) {
+      for (let x = 0; x < this.objects[y].length; x++) {
+        const object = this.objects[y][x];
+        if (object.type !== GameObjectType.WALL) {
+          object.updateNode();
+          // this.gameplayLayer.insertAdjacentHTML("beforeend", object.node());
+        }
+      }
+    }
   }
 
   renderWalls() {
@@ -102,17 +135,19 @@ class GameLevel {
           const pathObject = new GameObject(
             startX + x,
             startY + y,
-            50,
-            50,
+            // 50,
+            // 50,
+            this.tileWidth,
+            this.tileHeight,
             GameObjectType.PATH
           );
 
-          const currentNode =
-            this.gameBoxNode.childNodes[
-              (y + startY) * this.tileXCount + (x + startX)
-            ];
+          // const currentNode =
+          //   this.gameBoxNode.childNodes[
+          //     (y + startY) * this.tileXCount + (x + startX)
+          //   ];
           this.objects[startY + y][startX + x] = pathObject;
-          currentNode.className = pathObject.getObjectClassName();
+          // currentNode.className = pathObject.getObjectClassName();
         }
       }
     }
@@ -138,15 +173,17 @@ class GameLevel {
         const pathObject = new GameObject(
           x,
           startY,
-          50,
-          50,
+          // 50,
+          // 50,
+          this.tileWidth,
+          this.tileHeight,
           GameObjectType.PATH
         );
 
         this.objects[startY][x] = pathObject;
-        const currentNode =
-          this.gameBoxNode.childNodes[startY * this.tileXCount + x];
-        currentNode.className = pathObject.getObjectClassName();
+        // const currentNode =
+        //   this.gameBoxNode.childNodes[startY * this.tileXCount + x];
+        // currentNode.className = pathObject.getObjectClassName();
         // currentNode.style = pathObject.styleStr;
       }
     }
@@ -158,15 +195,17 @@ class GameLevel {
         const pathObject = new GameObject(
           startX,
           y,
-          50,
-          50,
+          // 50,
+          // 50,
+          this.tileWidth,
+          this.tileHeight,
           GameObjectType.PATH
         );
 
         this.objects[y][startX] = pathObject;
-        const currentNode =
-          this.gameBoxNode.childNodes[y * this.tileXCount + startX];
-        currentNode.className = pathObject.getObjectClassName();
+        // const currentNode =
+        //   this.gameBoxNode.childNodes[y * this.tileXCount + startX];
+        // currentNode.className = pathObject.getObjectClassName();
         // currentNode.style = pathObject.styleStr;
       }
     }
@@ -192,9 +231,8 @@ class GameLevel {
         );
         this.objects[y][x] = obj;
 
-        const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
-        tile.className = obj.getObjectClassName();
-
+        // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
+        // tile.className = obj.getObjectClassName();
         placedHeal++;
       }
     }
@@ -215,9 +253,8 @@ class GameLevel {
         );
         this.objects[y][x] = obj;
 
-        const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
-        tile.className = obj.getObjectClassName();
-
+        // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
+        // tile.className = obj.getObjectClassName();
         placedStrong++;
       }
     }
@@ -239,8 +276,8 @@ class GameLevel {
           GameObjectType.ENEMY
         );
         this.objects[y][x] = obj;
-        const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
-        tile.className = obj.getObjectClassName();
+        // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
+        // tile.className = obj.getObjectClassName();
         placed++;
       }
     }
@@ -259,11 +296,13 @@ class GameLevel {
           y,
           this.tileWidth,
           this.tileHeight,
+          // 100,
+          // 100,
           GameObjectType.PLAYER
         );
         this.objects[y][x] = obj;
-        const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
-        tile.className = obj.getObjectClassName();
+        // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
+        // tile.className = obj.getObjectClassName();
         placed++;
       }
     }
@@ -281,9 +320,12 @@ class GameObjectType {
 }
 
 class GameObject {
+  // constructor(x, y, tileWidth, tileHeight, objectWidth, objectHeight, type) {
   constructor(x, y, tileWidth, tileHeight, type) {
     this.x = x;
     this.y = y;
+    // this.objectWidth = objectWidth;
+    // this.objectHeight = objectHeight;
     this.tileWidth = tileWidth;
     this.tileHeight = tileHeight;
     this.type = type;
@@ -311,9 +353,38 @@ class GameObject {
   node() {
     const objectClassName = this.objectClassName;
 
-    return `<div class="${objectClassName}" style="width: ${this.tileWidth.toFixed(
-      2
-    )}px; height: ${this.tileHeight.toFixed(2)}px"></div>`;
+    if (this.type === GameObjectType.WALL) {
+      return `<div class="${objectClassName}" style="
+                width: ${this.tileWidth.toFixed(2)}px;
+                height: ${this.tileHeight.toFixed(2)}px" 
+                data-x="${this.x}"
+                data-y="${this.y}">
+              </div>`;
+    } else {
+      return `<div class="tile" style="
+                width: ${this.tileWidth.toFixed(2)}px;
+                height: ${this.tileHeight.toFixed(2)}px" 
+                data-x="${this.x}" 
+                data-y="${this.y}">
+                  <div class="${objectClassName}" style="position: absolute"></div>
+              </div>`;
+    }
+
+    // else {
+    //   return `<div class="${objectClassName}" style="width: ${this.tileWidth.toFixed(
+    //     2
+    //   )}px; height: ${this.tileHeight.toFixed(2)}px; position: absolute; top: ${
+    //     this.y * this.tileHeight
+    //   }px; left: ${this.x * this.tileWidth}px"></div>`;
+    // }
+  }
+
+  updateNode() {
+    const currentNode = document.querySelector(
+      `.tileW[data-x="${this.x}"][data-y="${this.y}"]`
+    );
+    // console.log({ currentNode });
+    // debugger;
   }
 
   styleStr() {
