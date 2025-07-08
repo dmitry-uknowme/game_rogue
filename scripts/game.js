@@ -9,6 +9,7 @@ class Game {
     this.level.renderWalls();
     this.level.renderRooms();
     this.level.renderPaths();
+    this.level.renderEffects();
   }
 }
 
@@ -93,8 +94,8 @@ class GameLevel {
           const pathObject = new GameObject(
             startX + x,
             startY + y,
-            this.tileWidth,
-            this.tileHeight,
+            50,
+            50,
             GameObjectType.PATH
           );
 
@@ -129,8 +130,8 @@ class GameLevel {
         const pathObject = new GameObject(
           x,
           startY,
-          this.tileWidth,
-          this.tileHeight,
+          50,
+          50,
           GameObjectType.PATH
         );
 
@@ -148,8 +149,8 @@ class GameLevel {
         const pathObject = new GameObject(
           startX,
           y,
-          this.tileWidth,
-          this.tileHeight,
+          50,
+          50,
           GameObjectType.PATH
         );
 
@@ -157,6 +158,57 @@ class GameLevel {
         const currentNode =
           this.gameBoxNode.childNodes[y * this.tileXCount + startX];
         currentNode.className = pathObject.getObjectClassName();
+      }
+    }
+  }
+
+  renderEffects() {
+    const healEffectsCount = this.settings.EFFECT_HEAL_MIN;
+    const strongEffectsCount = this.settings.EFFECT_STRONG_MIN;
+
+    let placedHeal = 0;
+    while (placedHeal < healEffectsCount) {
+      const y = randomInteger(0, this.tileYCount - 1);
+      const x = randomInteger(0, this.tileXCount - 1);
+
+      const current = this.objects[y][x];
+      if (current.type === GameObjectType.PATH) {
+        const obj = new GameObject(
+          x,
+          y,
+          this.tileWidth,
+          this.tileHeight,
+          GameObjectType.EFFECT_HEAL
+        );
+        this.objects[y][x] = obj;
+
+        const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
+        tile.className = obj.getObjectClassName();
+
+        placedHeal++;
+      }
+    }
+
+    let placedStrong = 0;
+    while (placedStrong < strongEffectsCount) {
+      const y = randomInteger(0, this.tileYCount - 1);
+      const x = randomInteger(0, this.tileXCount - 1);
+
+      const current = this.objects[y][x];
+      if (current.type === GameObjectType.PATH) {
+        const obj = new GameObject(
+          x,
+          y,
+          this.tileWidth,
+          this.tileHeight,
+          GameObjectType.EFFECT_STRONG
+        );
+        this.objects[y][x] = obj;
+
+        const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
+        tile.className = obj.getObjectClassName();
+
+        placedStrong++;
       }
     }
   }
@@ -168,6 +220,8 @@ class GameObjectType {
   static PATH = "OBJECT_PATH";
   static EFFECT_HEAL = "OBJECT_EFFECT_HEAL";
   static EFFECT_STRONG = "OBJECT_EFFECT_STRONG";
+  static PLAYER = "OBJECT_PLAYER";
+  static ENEMY = "OBJECT_ENEMY";
 }
 
 class GameObject {
@@ -200,6 +254,49 @@ class GameObject {
     return `<div class="${objectClassName}" style="width: ${this.tileWidth.toFixed(
       2
     )}px; height: ${this.tileHeight.toFixed(2)}px"></div>`;
+  }
+}
+
+class BaseCharacter extends GameObject {
+  constructor(x, y, tileWidth, tileHeight, type) {
+    this.x = x;
+    this.y = y;
+    this.tileWidth = tileWidth;
+    this.tileHeight = tileHeight;
+    this.type = type;
+    super(this.x, this.y, this.tileWidth, this.tileHeight, this.type);
+  }
+}
+
+class Enemy extends BaseCharacter {
+  constructor(x, y, tileWidth, tileHeight) {
+    this.x = x;
+    this.y = y;
+    this.tileWidth = tileWidth;
+    this.tileHeight = tileHeight;
+    super(
+      this.x,
+      this.y,
+      this.tileWidth,
+      this.tileHeight,
+      GameObjectType.ENEMY
+    );
+  }
+}
+
+class Player extends BaseCharacter {
+  constructor(x, y, tileWidth, tileHeight) {
+    this.x = x;
+    this.y = y;
+    this.tileWidth = tileWidth;
+    this.tileHeight = tileHeight;
+    super(
+      this.x,
+      this.y,
+      this.tileWidth,
+      this.tileHeight,
+      GameObjectType.PLAYER
+    );
   }
 }
 
