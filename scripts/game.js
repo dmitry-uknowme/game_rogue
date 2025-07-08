@@ -8,6 +8,7 @@ class Game {
   init() {
     this.level.renderWalls();
     this.level.renderRooms();
+    this.level.renderPaths();
   }
 }
 
@@ -77,15 +78,21 @@ class GameLevel {
       this.settings.ROOMS_COUNT_MAX
     );
     for (let i = 0; i < roomCount; i++) {
-      const roomWidth = randomInteger(3, 8);
-      const roomHeight = randomInteger(3, 6);
+      const roomWidth = randomInteger(
+        this.settings.ROOM_SIZE_MIN,
+        this.settings.ROOM_SIZE_MAX
+      );
+      const roomHeight = randomInteger(
+        this.settings.ROOM_SIZE_MIN,
+        this.settings.ROOM_SIZE_MAX
+      );
       const startX = randomInteger(1, this.tileXCount - roomWidth - 1);
       const startY = randomInteger(1, this.tileYCount - roomHeight - 1);
       for (let y = 0; y < roomHeight; y++) {
         for (let x = 0; x < roomWidth; x++) {
           const pathObject = new GameObject(
-            x,
-            y,
+            startX + x,
+            startY + y,
             this.tileWidth,
             this.tileHeight,
             GameObjectType.PATH
@@ -93,11 +100,63 @@ class GameLevel {
 
           const currentNode =
             this.gameBoxNode.childNodes[
-              y * this.tileYCount + startY + x * this.tileXCount + startX
+              (y + startY) * this.tileXCount + (x + startX)
             ];
           this.objects[startY + y][startX + x] = pathObject;
           currentNode.className = pathObject.getObjectClassName();
         }
+      }
+    }
+  }
+
+  renderPaths() {
+    const pathXCount = randomInteger(
+      this.settings.PATH_COUNT_MIN,
+      this.settings.PATH_COUNT_MAX
+    );
+    const pathYCount = randomInteger(
+      this.settings.PATH_COUNT_MIN,
+      this.settings.PATH_COUNT_MAX
+    );
+
+    const startYUsed = [];
+    const startXUsed = [];
+
+    for (let i = 0; i < pathXCount; i++) {
+      const startY = randomInteger(1, this.tileYCount - 1, startYUsed);
+      startYUsed.push(startY);
+      for (let x = 0; x < this.tileXCount; x++) {
+        const pathObject = new GameObject(
+          x,
+          startY,
+          this.tileWidth,
+          this.tileHeight,
+          GameObjectType.PATH
+        );
+
+        this.objects[startY][x] = pathObject;
+        const currentNode =
+          this.gameBoxNode.childNodes[startY * this.tileXCount + x];
+        currentNode.className = pathObject.getObjectClassName();
+      }
+    }
+
+    for (let i = 0; i < pathYCount; i++) {
+      const startX = randomInteger(1, this.tileXCount - 1, startXUsed);
+      startXUsed.push(startX);
+      for (let y = 0; y < this.tileYCount; y++) {
+        const pathObject = new GameObject(
+          startX,
+          y,
+          this.tileWidth,
+          this.tileHeight,
+          GameObjectType.PATH
+        );
+
+        this.objects[y][startX] = pathObject;
+        const currentNode =
+          this.gameBoxNode.childNodes[y * this.tileXCount + startX];
+        currentNode.className = pathObject.getObjectClassName();
       }
     }
   }
@@ -144,6 +203,13 @@ class GameObject {
   }
 }
 
-function randomInteger(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+function randomInteger(min, max, usedResults = [], maxTries = 5) {
+  const result = Math.floor(Math.random() * (max - min + 1)) + min;
+  if (maxTries === 0) {
+    throw Error("No random tries left");
+  }
+  if (result in usedResults) {
+    return randomInteger(min, max, usedResults, maxTries - 1);
+  }
+  return result;
 }
