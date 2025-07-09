@@ -220,7 +220,6 @@ class GameLevel {
   }
 
   renderEffects() {
-    // console.log({ objs: this.gameplayObjects });
     const healEffectsCount = this.settings.EFFECT_HEAL_MIN;
     const strongEffectsCount = this.settings.EFFECT_STRONG_MIN;
 
@@ -285,7 +284,8 @@ class GameLevel {
           this.tileWidth,
           this.tileHeight,
           1,
-          (x, y) => this.staticObjects[y][x]
+          this.getStaticObject.bind(this),
+          this.setStaticObject.bind(this)
         );
 
         this.staticObjects[y][x] = obj;
@@ -310,7 +310,8 @@ class GameLevel {
           this.tileWidth,
           this.tileHeight,
           1,
-          (x, y) => this.staticObjects[y][x]
+          this.getStaticObject.bind(this),
+          this.setStaticObject.bind(this)
         );
         this.staticObjects[y][x] = obj;
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
@@ -318,6 +319,25 @@ class GameLevel {
         placed++;
       }
     }
+  }
+
+  getStaticObject(x, y) {
+    if (!this.isInBounds(x, y)) return null;
+    return this.staticObjects[y][x];
+  }
+
+  setStaticObject(x, y, newObj) {
+    this.staticObjects[y][x] = newObj;
+    return newObj;
+  }
+
+  isInBounds(mapX, mapY) {
+    const isInBounds =
+      mapY >= 0 &&
+      mapY < this.tileYCount &&
+      mapX >= 0 &&
+      mapX < this.tileXCount;
+    return isInBounds;
   }
 }
 
@@ -408,9 +428,7 @@ class GameObject {
         `.tileW[data-x="${this.x}"][data-y="${this.y}"]`
       ).innerHTML = this.node();
     } else {
-      console.log({
-        currentNode: `.tileW[data-x="${this.x}"][data-y="${this.y}"]`,
-      });
+      console.log(`.tileW[data-x="${this.x}"][data-y="${this.y}"]`);
     }
   }
 
@@ -422,7 +440,16 @@ class GameObject {
 }
 
 class BaseCharacter extends GameObject {
-  constructor(x, y, tileWidth, tileHeight, type, fovRadius, getStaticObject) {
+  constructor(
+    x,
+    y,
+    tileWidth,
+    tileHeight,
+    type,
+    fovRadius,
+    getStaticObject,
+    setStaticObject
+  ) {
     super(x, y, tileWidth, tileHeight, type);
     this.x = x;
     this.y = y;
@@ -431,23 +458,30 @@ class BaseCharacter extends GameObject {
     this.type = type;
     this.fovRadius = fovRadius;
     this.getStaticObject = getStaticObject;
+    this.setStaticObject = setStaticObject;
     this.fovObjects = [];
     this.initFovObjects();
   }
 
   initFovObjects() {
+    const r = this.fovRadius - 1;
+    if (!this.fovObjects?.length) {
+      this.fovObjects = new Array(3 + r)
+        .fill(null)
+        .map((el) => new Array(3 + r).fill(null));
+    }
+  }
+
+  updateFovObjects() {
     // const centerOnStatic = this.getStaticObject(this.x, this.y);
     // console.log({ x: this.x, y: this.y, centerOnStatic });
     const r = this.fovRadius - 1;
     const centerIndex = Math.round((3 + r) / 2) - 1;
-    // this.fovObjects = new Array(3 + r).fill(null).map((el1, key1) =>
-    //   new Array(3 + r).fill(null).map((el2, key2) => {
-    //     const staticObject =
-    //     key1 === centerIndex && key2 === centerIndex ? this : null;
-    //   })
-    // );
-    this.fovObjects = new Array(3 + r).fill(null).map((_, dy) =>
-      new Array(3 + r).fill(null).map((_, dx) => {
+
+    const prevObjects = this.fovObjects;
+
+    this.fovObjects = this.fovObjects.map((arr1, dy) =>
+      arr1.map((arr2, dx) => {
         const mapX = this.x + (dx - centerIndex);
         const mapY = this.y + (dy - centerIndex);
 
@@ -455,23 +489,104 @@ class BaseCharacter extends GameObject {
           return this;
         }
 
-        const isInBounds =
-          mapY >= 0 &&
-          mapY < this.tileYCount &&
-          mapX >= 0 &&
-          mapX < this.tileXCount;
+        const staticObject = this.getStaticObject(mapX, mapY);
+        if (!staticObject) return null;
 
-        if (!isInBounds) return null;
+        if (staticObject.type !== GameObjectType.PATH) {
+        }
 
-        const staticObject = this.getStaticObject?.(mapX, mapY);
         return staticObject ?? null;
       })
     );
+
+    this.updateFov(prevObjects);
+    return this.fovObjects;
+  }
+
+  updateFov(prevObjects) {
+    const newObjects = this.fovObjects;
+    const dirtyObjects = [];
+    // console.log({ prevObjects, newObjects });
+    debugger;
+    const coords = (arr) =>
+      arr.map((row) =>
+        row.map((obj) => (obj ? { x: obj.x, y: obj.y, type: obj.type } : null))
+      );
+    console.log({
+      prev: JSON.stringify(coords(prevObjects)),
+      next: JSON.stringify(coords(newObjects)),
+    });
+    // newFovObjects.forEach((objects)=>{
+    //   objects.forEach((obj)=> )
+    // })
+
+    // const dirtyObjects = newFovObjects.map((arr1) =>
+    //   arr1.map((obj) => {
+    //     return prevObjects.find(
+    //       (prevObj) => prevObj.x === obj.x && prevObj.y === obj.y
+    //     );
+    //   })
+    // );
+    // debugger;
+  }
+
+  move(keys) {
+    let newX;
+    let newY;
+    if (keys.w) {
+      newX = this.x;
+      newY = this.y - 1;
+    } else if (keys.s) {
+      newX = this.x;
+      newY = this.y + 1;
+    } else if (keys.a) {
+      newX = this.x - 1;
+      newY = this.y;
+    } else if (keys.d) {
+      newX = this.x + 1;
+      newY = this.y;
+    }
+
+    if (this.getStaticObject(newX, newY)?.type !== GameObjectType.PATH) return;
+
+    this.moveTo(newX, newY);
+  }
+
+  moveTo(targetX, targetY) {
+    const oldX = this.x;
+    const oldY = this.y;
+
+    const prevObj = this.getStaticObject(oldX, oldY);
+    const targetObj = this.getStaticObject(targetX, targetY);
+
+    this.setStaticObject(oldX, oldY, targetObj);
+    this.setStaticObject(targetX, targetY, prevObj);
+
+    prevObj.x = targetX;
+    prevObj.y = targetY;
+    targetObj.x = oldX;
+    targetObj.y = oldY;
+
+    this.x = targetX;
+    this.y = targetY;
+
+    targetObj.updateNode();
+    prevObj.updateNode();
+
+    this.updateFovObjects();
   }
 }
 
 class Enemy extends BaseCharacter {
-  constructor(x, y, tileWidth, tileHeight, fovRadius, getStaticObject) {
+  constructor(
+    x,
+    y,
+    tileWidth,
+    tileHeight,
+    fovRadius,
+    getStaticObject,
+    setStaticObject
+  ) {
     super(
       x,
       y,
@@ -479,7 +594,8 @@ class Enemy extends BaseCharacter {
       tileHeight,
       GameObjectType.ENEMY,
       fovRadius,
-      getStaticObject
+      getStaticObject,
+      setStaticObject
     );
     this.x = x;
     this.y = y;
@@ -487,11 +603,20 @@ class Enemy extends BaseCharacter {
     this.tileHeight = tileHeight;
     this.fovRadius = fovRadius;
     this.getStaticObject = getStaticObject;
+    this.setStaticObject = setStaticObject;
   }
 }
 
 class Player extends BaseCharacter {
-  constructor(x, y, tileWidth, tileHeight, fovRadius, getStaticObject) {
+  constructor(
+    x,
+    y,
+    tileWidth,
+    tileHeight,
+    fovRadius,
+    getStaticObject,
+    setStaticObject
+  ) {
     super(
       x,
       y,
@@ -499,7 +624,8 @@ class Player extends BaseCharacter {
       tileHeight,
       GameObjectType.PLAYER,
       fovRadius,
-      getStaticObject
+      getStaticObject,
+      setStaticObject
     );
     this.x = x;
     this.y = y;
@@ -507,6 +633,32 @@ class Player extends BaseCharacter {
     this.tileHeight = tileHeight;
     this.fovRadius = fovRadius;
     this.getStaticObject = getStaticObject;
+    this.setStaticObject = setStaticObject;
+    this.initControlListener();
+  }
+
+  initControlListener() {
+    const keys = {
+      w: false,
+      a: false,
+      s: false,
+      d: false,
+    };
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() in keys) {
+        keys[e.key.toLowerCase()] = true;
+      }
+      // if (keys.w) {
+      this.move(keys);
+      // }
+    });
+
+    document.addEventListener("keyup", (e) => {
+      if (e.key.toLowerCase() in keys) {
+        keys[e.key.toLowerCase()] = false;
+      }
+    });
   }
 }
 
