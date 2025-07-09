@@ -1,8 +1,13 @@
 class Game {
   constructor() {
-    this.objects = [];
+    this.staticObjects = [];
+    this.gameplayObjects = [];
     this.gameBoxNode = document.querySelector(".field");
-    this.level = new GameLevel(this.gameBoxNode, this.objects);
+    this.level = new GameLevel(
+      this.gameBoxNode,
+      this.staticObjects,
+      this.gameplayObjects
+    );
   }
 
   init() {
@@ -38,14 +43,16 @@ class GameLevelSettings {
 class GameLevel {
   constructor(
     gameBoxNode,
-    objects,
+    staticObjects,
+    gameplayObjects,
     width = 1024,
     height = 640,
     tileXCount = 40,
     tileYCount = 24
   ) {
     this.gameBoxNode = gameBoxNode;
-    this.objects = objects;
+    this.staticObjects = staticObjects;
+    this.gameplayObjects = gameplayObjects;
     this.width = width;
     this.height = height;
     this.tileXCount = tileXCount;
@@ -56,12 +63,10 @@ class GameLevel {
   }
 
   run() {
-    // this.update();
-    // requestAnimationFrame(this.run.bind(this));
     const now = performance.now();
     const delta = now - (this.lastUpdateTime || 0);
 
-    const targetFPS = 30; // например, 10 кадров в секунду
+    const targetFPS = 10;
     const frameDuration = 1000 / targetFPS;
 
     if (!this.lastUpdateTime || delta >= frameDuration) {
@@ -69,26 +74,32 @@ class GameLevel {
       this.lastUpdateTime = now;
     }
 
-    requestAnimationFrame(this.run.bind(this));
+    // requestAnimationFrame(this.run.bind(this));
   }
 
   init() {
+    // this.gameplayObjects = Array.from({ length: this.tileYCount }, () =>
+    //   Array.from({ length: this.tileXCount }, () => null)
+    // );
+    // this.staticObjects = Array.from({ length: this.tileYCount }, () =>
+    //   Array.from({ length: this.tileXCount }, () => null)
+    // );
     this.renderWalls();
     this.renderRooms();
     this.renderPaths();
     this.renderEffects();
-    this.renderEnemies();
-    this.renderPlayer();
+    // this.renderEnemies();
+    // this.renderPlayer();
   }
 
   update() {
-    console.log("updateee");
+    console.log("updateee", this.gameplayObjects);
 
     // this.gameplayLayer.innerHTML = "";
-    for (let y = 0; y < this.objects.length; y++) {
-      for (let x = 0; x < this.objects[y].length; x++) {
-        const object = this.objects[y][x];
-        if (object.type !== GameObjectType.WALL) {
+    for (let y = 0; y < this.gameplayObjects.length; y++) {
+      for (let x = 0; x < this.gameplayObjects[y].length; x++) {
+        const object = this.gameplayObjects[y][x];
+        if (object && object.type !== GameObjectType.WALL) {
           object.updateNode();
           // this.gameplayLayer.insertAdjacentHTML("beforeend", object.node());
         }
@@ -110,7 +121,7 @@ class GameLevel {
         this.gameBoxNode.insertAdjacentHTML("beforeend", wallObject.node());
         row.push(wallObject);
       }
-      this.objects.push(row);
+      this.staticObjects.push(row);
     }
   }
 
@@ -146,7 +157,7 @@ class GameLevel {
           //   this.gameBoxNode.childNodes[
           //     (y + startY) * this.tileXCount + (x + startX)
           //   ];
-          this.objects[startY + y][startX + x] = pathObject;
+          this.staticObjects[startY + y][startX + x] = pathObject;
           // currentNode.className = pathObject.getObjectClassName();
         }
       }
@@ -180,7 +191,7 @@ class GameLevel {
           GameObjectType.PATH
         );
 
-        this.objects[startY][x] = pathObject;
+        this.staticObjects[startY][x] = pathObject;
         // const currentNode =
         //   this.gameBoxNode.childNodes[startY * this.tileXCount + x];
         // currentNode.className = pathObject.getObjectClassName();
@@ -202,7 +213,7 @@ class GameLevel {
           GameObjectType.PATH
         );
 
-        this.objects[y][startX] = pathObject;
+        this.staticObjects[y][startX] = pathObject;
         // const currentNode =
         //   this.gameBoxNode.childNodes[y * this.tileXCount + startX];
         // currentNode.className = pathObject.getObjectClassName();
@@ -212,6 +223,7 @@ class GameLevel {
   }
 
   renderEffects() {
+    // console.log({ objs: this.gameplayObjects });
     const healEffectsCount = this.settings.EFFECT_HEAL_MIN;
     const strongEffectsCount = this.settings.EFFECT_STRONG_MIN;
 
@@ -220,8 +232,10 @@ class GameLevel {
       const y = randomInteger(0, this.tileYCount - 1);
       const x = randomInteger(0, this.tileXCount - 1);
 
-      const current = this.objects[y][x];
-      if (current.type === GameObjectType.PATH) {
+      // const current = this.gameplayObjects[y][x];
+      const staticObj = this.staticObjects[y][x];
+      const dynamicObj = this.gameplayObjects[y][x];
+      if (staticObj?.type === GameObjectType.PATH && dynamicObj === null) {
         const obj = new GameObject(
           x,
           y,
@@ -229,7 +243,8 @@ class GameLevel {
           this.tileHeight,
           GameObjectType.EFFECT_HEAL
         );
-        this.objects[y][x] = obj;
+        // this.gameplayObjects[y][x] = obj;
+        this.gameplayObjects.push(obj);
 
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
         // tile.className = obj.getObjectClassName();
@@ -242,8 +257,10 @@ class GameLevel {
       const y = randomInteger(0, this.tileYCount - 1);
       const x = randomInteger(0, this.tileXCount - 1);
 
-      const current = this.objects[y][x];
-      if (current.type === GameObjectType.PATH) {
+      // const current = this.gameplayObjects[y][x];
+      const staticObj = this.staticObjects[y][x];
+      const dynamicObj = this.gameplayObjects[y][x];
+      if (staticObj?.type === GameObjectType.PATH && dynamicObj === null) {
         const obj = new GameObject(
           x,
           y,
@@ -251,7 +268,7 @@ class GameLevel {
           this.tileHeight,
           GameObjectType.EFFECT_STRONG
         );
-        this.objects[y][x] = obj;
+        this.gameplayObjects[y][x] = obj;
 
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
         // tile.className = obj.getObjectClassName();
@@ -275,7 +292,7 @@ class GameLevel {
           this.tileHeight,
           GameObjectType.ENEMY
         );
-        this.objects[y][x] = obj;
+        this.gameplayObjects[y][x] = obj;
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
         // tile.className = obj.getObjectClassName();
         placed++;
@@ -300,7 +317,7 @@ class GameLevel {
           // 100,
           GameObjectType.PLAYER
         );
-        this.objects[y][x] = obj;
+        this.gameplayObjects[y][x] = obj;
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
         // tile.className = obj.getObjectClassName();
         placed++;
@@ -383,6 +400,15 @@ class GameObject {
     const currentNode = document.querySelector(
       `.tileW[data-x="${this.x}"][data-y="${this.y}"]`
     );
+    if (currentNode) {
+      document.querySelector(
+        `.tileW[data-x="${this.x}"][data-y="${this.y}"]`
+      ).innerHTML = this.node();
+    } else {
+      console.log({
+        currentNode: `.tileW[data-x="${this.x}"][data-y="${this.y}"]`,
+      });
+    }
     // console.log({ currentNode });
     // debugger;
   }
