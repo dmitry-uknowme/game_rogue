@@ -70,7 +70,7 @@ class GameLevel {
     const frameDuration = 1000 / targetFPS;
 
     if (!this.lastUpdateTime || delta >= frameDuration) {
-      this.update();
+      // this.update();
       this.lastUpdateTime = now;
     }
 
@@ -87,22 +87,19 @@ class GameLevel {
     this.renderWalls();
     this.renderRooms();
     this.renderPaths();
-    this.renderEffects();
-    // this.renderEnemies();
-    // this.renderPlayer();
+    // this.renderEffects();
+    this.renderEnemies();
+    this.renderPlayer();
+    this.updateStatic();
   }
 
-  update() {
-    console.log("updateee", this.gameplayObjects);
-
-    // this.gameplayLayer.innerHTML = "";
-    for (let y = 0; y < this.gameplayObjects.length; y++) {
-      for (let x = 0; x < this.gameplayObjects[y].length; x++) {
-        const object = this.gameplayObjects[y][x];
-        if (object && object.type !== GameObjectType.WALL) {
-          object.updateNode();
-          // this.gameplayLayer.insertAdjacentHTML("beforeend", object.node());
-        }
+  updateStatic() {
+    for (let y = 0; y < this.staticObjects.length; y++) {
+      for (let x = 0; x < this.staticObjects[y].length; x++) {
+        const object = this.staticObjects[y][x];
+        // if (object && object.type !== GameObjectType.WALL) {
+        object.updateNode();
+        // }
       }
     }
   }
@@ -232,10 +229,8 @@ class GameLevel {
       const y = randomInteger(0, this.tileYCount - 1);
       const x = randomInteger(0, this.tileXCount - 1);
 
-      // const current = this.gameplayObjects[y][x];
       const staticObj = this.staticObjects[y][x];
-      const dynamicObj = this.gameplayObjects[y][x];
-      if (staticObj?.type === GameObjectType.PATH && dynamicObj === null) {
+      if (staticObj === GameObjectType.PATH) {
         const obj = new GameObject(
           x,
           y,
@@ -243,8 +238,7 @@ class GameLevel {
           this.tileHeight,
           GameObjectType.EFFECT_HEAL
         );
-        // this.gameplayObjects[y][x] = obj;
-        this.gameplayObjects.push(obj);
+        this.staticObjects[y][x] = obj;
 
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
         // tile.className = obj.getObjectClassName();
@@ -283,16 +277,18 @@ class GameLevel {
     while (placed < count) {
       const y = randomInteger(0, this.tileYCount - 1);
       const x = randomInteger(0, this.tileXCount - 1);
-      const current = this.objects[y][x];
+      const current = this.staticObjects[y][x];
       if (current.type === GameObjectType.PATH) {
-        const obj = new GameObject(
+        const obj = new Enemy(
           x,
           y,
           this.tileWidth,
           this.tileHeight,
-          GameObjectType.ENEMY
+          1,
+          (x, y) => this.staticObjects[y][x]
         );
-        this.gameplayObjects[y][x] = obj;
+
+        this.staticObjects[y][x] = obj;
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
         // tile.className = obj.getObjectClassName();
         placed++;
@@ -306,18 +302,17 @@ class GameLevel {
     while (placed < count) {
       const y = randomInteger(0, this.tileYCount - 1);
       const x = randomInteger(0, this.tileXCount - 1);
-      const current = this.objects[y][x];
+      const current = this.staticObjects[y][x];
       if (current.type === GameObjectType.PATH) {
-        const obj = new GameObject(
+        const obj = new Player(
           x,
           y,
           this.tileWidth,
           this.tileHeight,
-          // 100,
-          // 100,
-          GameObjectType.PLAYER
+          1,
+          (x, y) => this.staticObjects[y][x]
         );
-        this.gameplayObjects[y][x] = obj;
+        this.staticObjects[y][x] = obj;
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
         // tile.className = obj.getObjectClassName();
         placed++;
@@ -378,12 +373,20 @@ class GameObject {
                 data-y="${this.y}">
               </div>`;
     } else {
+      //   return `<div class="tile" style="
+      //             width: ${this.tileWidth.toFixed(2)}px;
+      //             height: ${this.tileHeight.toFixed(2)}px"
+      //             data-x="${this.x}"
+      //             data-y="${this.y}">
+      //               <div class="${objectClassName}" style="position: absolute"></div>
+      //           </div>`;
+      // }
       return `<div class="tile" style="
                 width: ${this.tileWidth.toFixed(2)}px;
                 height: ${this.tileHeight.toFixed(2)}px" 
                 data-x="${this.x}" 
                 data-y="${this.y}">
-                  <div class="${objectClassName}" style="position: absolute"></div>
+                  <div class="${objectClassName}"></div>
               </div>`;
     }
 
@@ -409,8 +412,6 @@ class GameObject {
         currentNode: `.tileW[data-x="${this.x}"][data-y="${this.y}"]`,
       });
     }
-    // console.log({ currentNode });
-    // debugger;
   }
 
   styleStr() {
@@ -421,45 +422,91 @@ class GameObject {
 }
 
 class BaseCharacter extends GameObject {
-  constructor(x, y, tileWidth, tileHeight, type) {
+  constructor(x, y, tileWidth, tileHeight, type, fovRadius, getStaticObject) {
+    super(x, y, tileWidth, tileHeight, type);
     this.x = x;
     this.y = y;
     this.tileWidth = tileWidth;
     this.tileHeight = tileHeight;
     this.type = type;
-    super(this.x, this.y, this.tileWidth, this.tileHeight, this.type);
+    this.fovRadius = fovRadius;
+    this.getStaticObject = getStaticObject;
+    this.fovObjects = [];
+    this.initFovObjects();
+  }
+
+  initFovObjects() {
+    // const centerOnStatic = this.getStaticObject(this.x, this.y);
+    // console.log({ x: this.x, y: this.y, centerOnStatic });
+    const r = this.fovRadius - 1;
+    const centerIndex = Math.round((3 + r) / 2) - 1;
+    // this.fovObjects = new Array(3 + r).fill(null).map((el1, key1) =>
+    //   new Array(3 + r).fill(null).map((el2, key2) => {
+    //     const staticObject =
+    //     key1 === centerIndex && key2 === centerIndex ? this : null;
+    //   })
+    // );
+    this.fovObjects = new Array(3 + r).fill(null).map((_, dy) =>
+      new Array(3 + r).fill(null).map((_, dx) => {
+        const mapX = this.x + (dx - centerIndex);
+        const mapY = this.y + (dy - centerIndex);
+
+        if (dx === centerIndex && dy === centerIndex) {
+          return this;
+        }
+
+        const isInBounds =
+          mapY >= 0 &&
+          mapY < this.tileYCount &&
+          mapX >= 0 &&
+          mapX < this.tileXCount;
+
+        if (!isInBounds) return null;
+
+        const staticObject = this.getStaticObject?.(mapX, mapY);
+        return staticObject ?? null;
+      })
+    );
   }
 }
 
 class Enemy extends BaseCharacter {
-  constructor(x, y, tileWidth, tileHeight) {
+  constructor(x, y, tileWidth, tileHeight, fovRadius, getStaticObject) {
+    super(
+      x,
+      y,
+      tileWidth,
+      tileHeight,
+      GameObjectType.ENEMY,
+      fovRadius,
+      getStaticObject
+    );
     this.x = x;
     this.y = y;
     this.tileWidth = tileWidth;
     this.tileHeight = tileHeight;
-    super(
-      this.x,
-      this.y,
-      this.tileWidth,
-      this.tileHeight,
-      GameObjectType.ENEMY
-    );
+    this.fovRadius = fovRadius;
+    this.getStaticObject = getStaticObject;
   }
 }
 
 class Player extends BaseCharacter {
-  constructor(x, y, tileWidth, tileHeight) {
+  constructor(x, y, tileWidth, tileHeight, fovRadius, getStaticObject) {
+    super(
+      x,
+      y,
+      tileWidth,
+      tileHeight,
+      GameObjectType.PLAYER,
+      fovRadius,
+      getStaticObject
+    );
     this.x = x;
     this.y = y;
     this.tileWidth = tileWidth;
     this.tileHeight = tileHeight;
-    super(
-      this.x,
-      this.y,
-      this.tileWidth,
-      this.tileHeight,
-      GameObjectType.PLAYER
-    );
+    this.fovRadius = fovRadius;
+    this.getStaticObject = getStaticObject;
   }
 }
 
