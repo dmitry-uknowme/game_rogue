@@ -131,6 +131,29 @@ class BaseCharacter extends GameObject {
     });
   }
 
+  applyEffect(obj) {
+    if (obj.type === GameObjectType.EFFECT_HEAL) {
+      const newHp = Math.min(this.currentHp + 5, this.maxHp);
+      this.currentHp = newHp;
+    } else if (obj.type === GameObjectType.EFFECT_STRONG) {
+      this.strong = 4;
+      setTimeout(() => {
+        console.log("effect strong released");
+        this.strong = 2;
+        this.pushLevelChanges([this]);
+      }, 5000);
+    }
+    const pathObj = new GameObject(
+      obj.x,
+      obj.y,
+      this.tileWidth,
+      this.tileHeight,
+      GameObjectType.PATH
+    );
+    const replaced = this.setStaticObject(obj.x, obj.y, pathObj);
+    this.pushLevelChanges([this, replaced]);
+  }
+
   moveKeys(keys) {
     let newX;
     let newY;
@@ -148,7 +171,23 @@ class BaseCharacter extends GameObject {
       newY = this.y;
     }
 
-    if (this.getStaticObject(newX, newY)?.type !== GameObjectType.PATH) return;
+    const staticObject = this.getStaticObject(newX, newY);
+    if (!staticObject) return;
+
+    if (
+      staticObject.type === GameObjectType.EFFECT_HEAL ||
+      staticObject.type === GameObjectType.EFFECT_STRONG
+    ) {
+      this.applyEffect(staticObject);
+    }
+
+    if (
+      staticObject.type !== GameObjectType.PATH &&
+      staticObject.type !== GameObjectType.EFFECT_HEAL &&
+      staticObject.type !== GameObjectType.EFFECT_STRONG
+      // && !(staticObject in GameObjectType.EFFECTS
+    )
+      return;
 
     this.moveTo(newX, newY);
   }
@@ -173,12 +212,7 @@ class BaseCharacter extends GameObject {
     const resultMoveTo = this.getStaticObject(targetX, targetY);
     console.log(`Moved from (${oldX}, ${oldY}) to (${targetX}, ${targetY})`);
 
-    // targetObj.updateNode();
-    // prevObj.updateNode();
     this.pushLevelChanges([targetObj, this]);
-    // debugger;
-
-    // this.updateFovObjects();
   }
 
   // moveTo(targetX, targetY) {

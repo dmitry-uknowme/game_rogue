@@ -6,6 +6,8 @@ class GameObjectType {
   static EFFECT_STRONG = "OBJECT_EFFECT_STRONG";
   static PLAYER = "OBJECT_PLAYER";
   static ENEMY = "OBJECT_ENEMY";
+
+  static EFFECTS = [GameObjectType.EFFECT_HEAL, GameObjectType.EFFECT_STRONG];
 }
 
 class GameObject {

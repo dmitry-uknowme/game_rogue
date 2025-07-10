@@ -70,8 +70,8 @@ class GameLevel {
     this.renderWalls();
     this.renderRooms();
     this.renderPaths();
-    // this.renderEffects();
-    const enemies = this.renderEnemies();
+    this.renderEffects();
+    this.renderEnemies();
     this.renderPlayer();
     this.updateStatic();
 
@@ -249,14 +249,17 @@ class GameLevel {
   renderEffects() {
     const healEffectsCount = this.settings.EFFECT_HEAL_MIN;
     const strongEffectsCount = this.settings.EFFECT_STRONG_MIN;
-
     let placedHeal = 0;
-    while (placedHeal < healEffectsCount) {
+    let placedStrong = 0;
+    let attempts = 0;
+    const maxAttempts = 1000;
+
+    while (placedHeal < healEffectsCount && attempts < maxAttempts) {
       const y = randomInteger(0, this.tileYCount - 1);
       const x = randomInteger(0, this.tileXCount - 1);
 
       const staticObj = this.staticObjects[y][x];
-      if (staticObj === GameObjectType.PATH) {
+      if (staticObj?.type === GameObjectType.PATH) {
         const obj = new GameObject(
           x,
           y,
@@ -265,20 +268,18 @@ class GameLevel {
           GameObjectType.EFFECT_HEAL
         );
         this.staticObjects[y][x] = obj;
-
-        // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
-        // tile.className = obj.getObjectClassName();
         placedHeal++;
       }
+
+      attempts++;
     }
 
-    let placedStrong = 0;
-    while (placedStrong < strongEffectsCount) {
+    while (placedStrong < strongEffectsCount && attempts < maxAttempts) {
       const y = randomInteger(0, this.tileYCount - 1);
       const x = randomInteger(0, this.tileXCount - 1);
 
       const staticObj = this.staticObjects[y][x];
-      if (staticObj === GameObjectType.PATH) {
+      if (staticObj?.type === GameObjectType.PATH) {
         const obj = new GameObject(
           x,
           y,
@@ -287,13 +288,66 @@ class GameLevel {
           GameObjectType.EFFECT_STRONG
         );
         this.staticObjects[y][x] = obj;
-
-        // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
-        // tile.className = obj.getObjectClassName();
         placedStrong++;
       }
+
+      attempts++;
+    }
+
+    if (placedHeal < healEffectsCount) {
+      console.warn(
+        `Размещено только ${placedHeal} из ${healEffectsCount} эффектов`
+      );
     }
   }
+
+  // renderEffects() {
+  //   const healEffectsCount = this.settings.EFFECT_HEAL_MIN;
+  //   const strongEffectsCount = this.settings.EFFECT_STRONG_MIN;
+  //   let placedHeal = 0;
+  //   while (placedHeal < healEffectsCount) {
+  //     const y = randomInteger(0, this.tileYCount - 1);
+  //     const x = randomInteger(0, this.tileXCount - 1);
+
+  //     const staticObj = this.staticObjects[y][x];
+  //     if (staticObj === GameObjectType.PATH) {
+  //       const obj = new GameObject(
+  //         x,
+  //         y,
+  //         this.tileWidth,
+  //         this.tileHeight,
+  //         GameObjectType.EFFECT_HEAL
+  //       );
+  //       this.staticObjects[y][x] = obj;
+
+  //       // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
+  //       // tile.className = obj.getObjectClassName();
+  //       placedHeal++;
+  //     }
+  //   }
+
+  //   // let placedStrong = 0;
+  //   // while (placedStrong < strongEffectsCount) {
+  //   //   const y = randomInteger(0, this.tileYCount - 1);
+  //   //   const x = randomInteger(0, this.tileXCount - 1);
+
+  //   //   const staticObj = this.staticObjects[y][x];
+  //   //   if (staticObj === GameObjectType.PATH) {
+  //   //     const obj = new GameObject(
+  //   //       x,
+  //   //       y,
+  //   //       this.tileWidth,
+  //   //       this.tileHeight,
+  //   //       GameObjectType.EFFECT_STRONG
+  //   //     );
+  //   //     this.staticObjects[y][x] = obj;
+
+  //   //     // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
+  //   //     // tile.className = obj.getObjectClassName();
+  //   //     placedStrong++;
+  //   //   }
+  //   // }
+  // }
 
   renderEnemies() {
     const enemies = [];
