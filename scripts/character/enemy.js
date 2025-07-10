@@ -28,7 +28,7 @@ class Enemy extends BaseCharacter {
     this.getStaticObject = getStaticObject;
     this.setStaticObject = setStaticObject;
     this.pushLevelChanges = pushLevelChanges;
-    this.autoMove();
+    // this.autoMove();
   }
 
   autoMove() {
@@ -54,8 +54,11 @@ class Enemy extends BaseCharacter {
       },
     };
     // const listObjects = flattenFov(fovObjects);
-
-    setInterval(() => {
+    let moveInterval = setInterval(() => {
+      if (this.currentHp < 0) {
+        clearInterval(moveInterval);
+        return;
+      }
       const moveList = Object.keys(moveDirections)
         .map((key) => moveDirections[key])
         .filter((item) => item.isMovable);

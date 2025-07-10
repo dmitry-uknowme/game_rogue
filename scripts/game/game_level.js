@@ -71,8 +71,9 @@ class GameLevel {
     this.renderRooms();
     this.renderPaths();
     this.renderEffects();
-    this.renderEnemies();
+    this.renderEnemies(true, true);
     this.renderPlayer();
+    GameLevelGenerator.connectPaths(this.staticObjects);
     this.updateStatic();
 
     // enemies.map((enemy) => enemy.autoMove());
@@ -111,6 +112,7 @@ class GameLevel {
           GameObjectType.PATH
         );
         this.pushChanges([pathObject]);
+        // this.init();
       }
     }
   }
@@ -123,7 +125,7 @@ class GameLevel {
   updateStatic() {
     for (let y = 0; y < this.staticObjects.length; y++) {
       for (let x = 0; x < this.staticObjects[y].length; x++) {
-        const object = this.staticObjects[y][x];
+        const object = this.getStaticObject(x, y);
         // if (object && object.type !== GameObjectType.WALL) {
         object.updateNode();
         // }
@@ -249,36 +251,35 @@ class GameLevel {
   renderEffects() {
     const healEffectsCount = this.settings.EFFECT_HEAL_MIN;
     const strongEffectsCount = this.settings.EFFECT_STRONG_MIN;
-    let placedHeal = 0;
+    let placedHeal = [];
     let placedStrong = 0;
     let attempts = 0;
     const maxAttempts = 1000;
 
-    while (placedHeal < healEffectsCount && attempts < maxAttempts) {
-      const y = randomInteger(0, this.tileYCount - 1);
-      const x = randomInteger(0, this.tileXCount - 1);
+    const spawnCoords = GameLevelGenerator.getRandomSpawnCoordsWithOffset(
+      this.staticObjects,
+      this.tileXCount,
+      this.tileYCount,
+      healEffectsCount,
+      5
+    );
 
-      const staticObj = this.staticObjects[y][x];
-      if (staticObj?.type === GameObjectType.PATH) {
-        const obj = new GameObject(
-          x,
-          y,
-          this.tileWidth,
-          this.tileHeight,
-          GameObjectType.EFFECT_HEAL
-        );
-        this.staticObjects[y][x] = obj;
-        placedHeal++;
-      }
-
-      attempts++;
-    }
+    spawnCoords.forEach((coord) => {
+      const obj = new GameObject(
+        coord.x,
+        coord.y,
+        this.tileWidth,
+        this.tileHeight,
+        GameObjectType.EFFECT_HEAL
+      );
+      this.setStaticObject(obj.x, obj.y, obj);
+    });
 
     while (placedStrong < strongEffectsCount && attempts < maxAttempts) {
       const y = randomInteger(0, this.tileYCount - 1);
       const x = randomInteger(0, this.tileXCount - 1);
 
-      const staticObj = this.staticObjects[y][x];
+      const staticObj = this.getStaticObject(x, y);
       if (staticObj?.type === GameObjectType.PATH) {
         const obj = new GameObject(
           x,
@@ -287,7 +288,7 @@ class GameLevel {
           this.tileHeight,
           GameObjectType.EFFECT_STRONG
         );
-        this.staticObjects[y][x] = obj;
+        this.setStaticObject(x, y, obj);
         placedStrong++;
       }
 
@@ -301,82 +302,36 @@ class GameLevel {
     }
   }
 
-  // renderEffects() {
-  //   const healEffectsCount = this.settings.EFFECT_HEAL_MIN;
-  //   const strongEffectsCount = this.settings.EFFECT_STRONG_MIN;
-  //   let placedHeal = 0;
-  //   while (placedHeal < healEffectsCount) {
-  //     const y = randomInteger(0, this.tileYCount - 1);
-  //     const x = randomInteger(0, this.tileXCount - 1);
-
-  //     const staticObj = this.staticObjects[y][x];
-  //     if (staticObj === GameObjectType.PATH) {
-  //       const obj = new GameObject(
-  //         x,
-  //         y,
-  //         this.tileWidth,
-  //         this.tileHeight,
-  //         GameObjectType.EFFECT_HEAL
-  //       );
-  //       this.staticObjects[y][x] = obj;
-
-  //       // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
-  //       // tile.className = obj.getObjectClassName();
-  //       placedHeal++;
-  //     }
-  //   }
-
-  //   // let placedStrong = 0;
-  //   // while (placedStrong < strongEffectsCount) {
-  //   //   const y = randomInteger(0, this.tileYCount - 1);
-  //   //   const x = randomInteger(0, this.tileXCount - 1);
-
-  //   //   const staticObj = this.staticObjects[y][x];
-  //   //   if (staticObj === GameObjectType.PATH) {
-  //   //     const obj = new GameObject(
-  //   //       x,
-  //   //       y,
-  //   //       this.tileWidth,
-  //   //       this.tileHeight,
-  //   //       GameObjectType.EFFECT_STRONG
-  //   //     );
-  //   //     this.staticObjects[y][x] = obj;
-
-  //   //     // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
-  //   //     // tile.className = obj.getObjectClassName();
-  //   //     placedStrong++;
-  //   //   }
-  //   // }
-  // }
-
-  renderEnemies() {
+  renderEnemies(withAutoMove = true) {
     const enemies = [];
     const count = this.settings.ENEMIES_COUNT_MIN;
-    let placed = 0;
-    while (placed < count) {
-      const y = randomInteger(0, this.tileYCount - 1);
-      const x = randomInteger(0, this.tileXCount - 1);
-      const current = this.staticObjects[y][x];
-      if (current.type === GameObjectType.PATH) {
-        const obj = new Enemy(
-          x,
-          y,
-          this.tileWidth,
-          this.tileHeight,
-          1,
-          this.getStaticObject.bind(this),
-          this.setStaticObject.bind(this),
-          this.pushChanges.bind(this)
-        );
-        enemies.push(obj);
 
-        this.staticObjects[y][x] = obj;
-        // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
-        // tile.className = obj.getObjectClassName();
-        placed++;
+    const spawnCoords = GameLevelGenerator.getRandomSpawnCoordsWithOffset(
+      this.staticObjects,
+      this.tileXCount,
+      this.tileYCount,
+      count,
+      5
+    );
+
+    spawnCoords.forEach((coord) => {
+      const obj = new Enemy(
+        coord.x,
+        coord.y,
+        this.tileWidth,
+        this.tileHeight,
+        1,
+        this.getStaticObject.bind(this),
+        this.setStaticObject.bind(this),
+        this.pushChanges.bind(this)
+      );
+
+      enemies.push(obj);
+      this.setStaticObject(obj.x, obj.y, obj);
+      if (withAutoMove) {
+        obj.autoMove();
       }
-    }
-    return enemies;
+    });
   }
 
   renderPlayer() {
@@ -385,7 +340,7 @@ class GameLevel {
     while (placed < count) {
       const y = randomInteger(0, this.tileYCount - 1);
       const x = randomInteger(0, this.tileXCount - 1);
-      const current = this.staticObjects[y][x];
+      const current = this.getStaticObject(x, y);
       if (current.type === GameObjectType.PATH) {
         const obj = new Player(
           x,
@@ -397,7 +352,7 @@ class GameLevel {
           this.setStaticObject.bind(this),
           this.pushChanges.bind(this)
         );
-        this.staticObjects[y][x] = obj;
+        this.setStaticObject(x, y, obj);
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
         // tile.className = obj.getObjectClassName();
         placed++;

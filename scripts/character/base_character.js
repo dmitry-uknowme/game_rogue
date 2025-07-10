@@ -202,45 +202,24 @@ class BaseCharacter extends GameObject {
     targetObj.y = oldY;
 
     this.prevPosition = { x: this.x, y: this.y };
+    // const movableNode = this.animateMove(targetX, targetY);
+
     this.x = targetX;
     this.y = targetY;
 
     // this.setStaticObject(targetX, targetY, this);
     // this.setStaticObject(oldX, oldY, targetObj);
 
-    const resultMoveFrom = this.getStaticObject(oldX, oldY);
-    const resultMoveTo = this.getStaticObject(targetX, targetY);
-    console.log(`Moved from (${oldX}, ${oldY}) to (${targetX}, ${targetY})`);
+    // const resultMoveFrom = this.getStaticObject(oldX, oldY);
+    // const resultMoveTo = this.getStaticObject(targetX, targetY);
+    // console.log(`Moved from (${oldX}, ${oldY}) to (${targetX}, ${targetY})`);
+
+    // movableNode.ontransitionend = () => {
+    // this.pushLevelChanges([targetObj, this]);
+    // };
 
     this.pushLevelChanges([targetObj, this]);
   }
-
-  // moveTo(targetX, targetY) {
-  //   const oldX = this.x;
-  //   const oldY = this.y;
-
-  //   // Получаем PATH объект с целевой позиции
-  //   const pathObj = this.getStaticObject(targetX, targetY);
-
-  //   // Ставим персонажа на новую позицию
-  //   this.setStaticObject(targetX, targetY, this);
-
-  //   // Ставим PATH объект на старую позицию персонажа
-  //   this.setStaticObject(oldX, oldY, pathObj);
-
-  //   // Обновляем координаты
-  //   if (pathObj) {
-  //     pathObj.x = oldX;
-  //     pathObj.y = oldY;
-  //   }
-
-  //   this.x = targetX;
-  //   this.y = targetY;
-
-  //   console.log(`Moved from (${oldX}, ${oldY}) to (${targetX}, ${targetY})`);
-
-  //   this.updateFovObjects();
-  // }
 
   node() {
     const objectClassName = this.objectClassName;

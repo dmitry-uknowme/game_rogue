@@ -44,7 +44,10 @@ class GameObject {
   node() {
     const objectClassName = this.objectClassName;
 
-    if (this.type === GameObjectType.WALL) {
+    if (
+      this.type === GameObjectType.WALL ||
+      this.type === GameObjectType.PATH
+    ) {
       return `<div class="${objectClassName}" style="
                   width: ${this.tileWidth.toFixed(2)}px;
                   height: ${this.tileHeight.toFixed(2)}px" 
@@ -89,6 +92,23 @@ class GameObject {
     } else {
       console.log(`.tileW[data-x="${this.x}"][data-y="${this.y}"]`);
     }
+  }
+
+  animateMove(newX, newY) {
+    const oldX = this.x;
+    const oldY = this.y;
+    const dx = newX - oldX;
+    const dy = newY - oldY;
+    const offsetX = dx * this.tileWidth;
+    const offsetY = dy * this.tileHeight;
+    const currentNode = document.querySelector(
+      `.tileW[data-x="${this.x}"][data-y="${this.y}"]`
+    );
+    const movableNode = currentNode.querySelector(".tile");
+    movableNode.style.zIndex = 25;
+    movableNode.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+
+    return movableNode;
   }
 
   styleStr() {
