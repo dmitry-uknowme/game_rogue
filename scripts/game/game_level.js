@@ -42,21 +42,22 @@ class GameLevel {
     this.tileWidth = width / tileXCount;
     this.tileHeight = height / tileYCount;
     this.settings = new GameLevelSettings();
+    this.changesStack = [];
   }
 
   run() {
     const now = performance.now();
     const delta = now - (this.lastUpdateTime || 0);
 
-    const targetFPS = 10;
+    const targetFPS = 30;
     const frameDuration = 1000 / targetFPS;
 
     if (!this.lastUpdateTime || delta >= frameDuration) {
-      // this.update();
+      this.updateChanged();
       this.lastUpdateTime = now;
     }
 
-    // requestAnimationFrame(this.run.bind(this));
+    requestAnimationFrame(this.run.bind(this));
   }
 
   init() {
@@ -70,9 +71,53 @@ class GameLevel {
     this.renderRooms();
     this.renderPaths();
     // this.renderEffects();
-    this.renderEnemies();
+    const enemies = this.renderEnemies();
     this.renderPlayer();
     this.updateStatic();
+
+    // enemies.map((enemy) => enemy.autoMove());
+  }
+
+  updateChanged() {
+    const changes = this.changesStack;
+    while (changes.length > 0) {
+      const objectToChange = changes.shift();
+
+      this.setStaticObject(objectToChange.x, objectToChange.y, objectToChange);
+      objectToChange.updateNode();
+      this.handlLevelChanges(objectToChange);
+    }
+  }
+
+  handlLevelChanges(obj) {
+    if (obj instanceof Enemy) {
+      if (obj.currentHp <= 0) {
+        const pathObject = new GameObject(
+          obj.x,
+          obj.y,
+          this.tileWidth,
+          this.tileHeight,
+          GameObjectType.PATH
+        );
+        this.pushChanges([pathObject]);
+      }
+    } else if (obj instanceof Player) {
+      if (obj.currentHp <= 0) {
+        const pathObject = new GameObject(
+          obj.x,
+          obj.y,
+          this.tileWidth,
+          this.tileHeight,
+          GameObjectType.PATH
+        );
+        this.pushChanges([pathObject]);
+      }
+    }
+  }
+
+  pushChanges(objs) {
+    this.changesStack = [...this.changesStack, ...objs];
+    return objs;
   }
 
   updateStatic() {
@@ -232,10 +277,8 @@ class GameLevel {
       const y = randomInteger(0, this.tileYCount - 1);
       const x = randomInteger(0, this.tileXCount - 1);
 
-      // const current = this.gameplayObjects[y][x];
       const staticObj = this.staticObjects[y][x];
-      const dynamicObj = this.gameplayObjects[y][x];
-      if (staticObj?.type === GameObjectType.PATH && dynamicObj === null) {
+      if (staticObj === GameObjectType.PATH) {
         const obj = new GameObject(
           x,
           y,
@@ -243,7 +286,7 @@ class GameLevel {
           this.tileHeight,
           GameObjectType.EFFECT_STRONG
         );
-        this.gameplayObjects[y][x] = obj;
+        this.staticObjects[y][x] = obj;
 
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
         // tile.className = obj.getObjectClassName();
@@ -253,6 +296,7 @@ class GameLevel {
   }
 
   renderEnemies() {
+    const enemies = [];
     const count = this.settings.ENEMIES_COUNT_MIN;
     let placed = 0;
     while (placed < count) {
@@ -267,8 +311,10 @@ class GameLevel {
           this.tileHeight,
           1,
           this.getStaticObject.bind(this),
-          this.setStaticObject.bind(this)
+          this.setStaticObject.bind(this),
+          this.pushChanges.bind(this)
         );
+        enemies.push(obj);
 
         this.staticObjects[y][x] = obj;
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
@@ -276,6 +322,7 @@ class GameLevel {
         placed++;
       }
     }
+    return enemies;
   }
 
   renderPlayer() {
@@ -293,7 +340,8 @@ class GameLevel {
           this.tileHeight,
           1,
           this.getStaticObject.bind(this),
-          this.setStaticObject.bind(this)
+          this.setStaticObject.bind(this),
+          this.pushChanges.bind(this)
         );
         this.staticObjects[y][x] = obj;
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];

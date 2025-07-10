@@ -94,6 +94,16 @@ class GameObject {
       2
     )}px; height: ${this.tileHeight.toFixed(2)}px`;
   }
+
+  toObject() {
+    return {
+      x: this.x,
+      y: this.y,
+      type: this.type,
+      tileWidth: this.tileWidth,
+      tileHeight: this.tileHeight,
+    };
+  }
 }
 
 window.GameObject = GameObject;

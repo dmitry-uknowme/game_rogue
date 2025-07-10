@@ -7,7 +7,8 @@ class BaseCharacter extends GameObject {
     type,
     fovRadius,
     getStaticObject,
-    setStaticObject
+    setStaticObject,
+    pushLevelChanges
   ) {
     super(x, y, tileWidth, tileHeight, type);
     this.x = x;
@@ -18,106 +19,119 @@ class BaseCharacter extends GameObject {
     this.fovRadius = fovRadius;
     this.getStaticObject = getStaticObject;
     this.setStaticObject = setStaticObject;
+    this.pushLevelChanges = pushLevelChanges;
+    this.maxHp = 10;
+    this.strong = 2;
+    this.currentHp = this.maxHp;
+    this.prevPosition = { x, y };
     this.fovObjects = [];
-    this.initFovObjects();
+    // this.fovObjects = this.getFovObjects();
   }
 
-  initFovObjects() {
-    const r = this.fovRadius - 1;
-    if (!this.fovObjects?.length) {
-      this.fovObjects = new Array(3 + r)
-        .fill(null)
-        .map((el) => new Array(3 + r).fill(null));
-    }
-  }
-
-  updateFovObjects() {
-    // const centerOnStatic = this.getStaticObject(this.x, this.y);
-    // console.log({ x: this.x, y: this.y, centerOnStatic });
-    const r = this.fovRadius - 1;
-    const centerIndex = Math.round((3 + r) / 2) - 1;
-
-    const prevObjects = this.fovObjects;
-
-    this.fovObjects = this.fovObjects.map((arr1, dy) =>
-      arr1.map((arr2, dx) => {
-        const mapX = this.x + (dx - centerIndex);
-        const mapY = this.y + (dy - centerIndex);
+  getFovObjects(x = this.x, y = this.y) {
+    const radius = this.fovRadius - 1;
+    const centerIndex = Math.round((3 + radius) / 2) - 1;
+    // const size = this.fovRadius * 2 + 1;
+    // const centerIndex = this.fovRadius;
+    const fovObjects = new Array(3 + radius).fill(null).map((_, dy) =>
+      new Array(3 + radius).fill(null).map((_, dx) => {
+        const mapX = x + (dx - centerIndex);
+        const mapY = y + (dy - centerIndex);
 
         if (dx === centerIndex && dy === centerIndex) {
           return this;
         }
 
         const staticObject = this.getStaticObject(mapX, mapY);
-        if (!staticObject) return null;
-
-        if (staticObject.type !== GameObjectType.PATH) {
-        }
-
         return staticObject ?? null;
       })
     );
 
-    this.updateFov(prevObjects);
-    return this.fovObjects;
+    return fovObjects;
   }
 
-  updateFov(prevObjects) {
-    const newObjects = this.fovObjects;
-    const dirtyObjects = [];
+  // updateFovObjects() {
+  //   const radius = this.fovRadius - 1;
+  //   const centerIndex = Math.round((3 + radius) / 2) - 1;
 
-    const rows = newObjects.length;
-    const cols = newObjects[0]?.length || 0;
+  //   // const prevObjects = [...this.fovObjects];
 
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        const p = prevObjects[y][x];
-        const n = newObjects[y][x];
+  //   this.fovObjects = prevObjects.map((arr1, dy) =>
+  //     arr1.map((arr2, dx) => {
+  //       const mapX = this.x + (dx - centerIndex);
+  //       const mapY = this.y + (dy - centerIndex);
 
-        // Случай, если один объект есть, а другой нет
-        if ((p === null) !== (n === null)) {
-          dirtyObjects.push({ y, x });
-          continue;
-        }
+  //       if (dx === centerIndex && dy === centerIndex) {
+  //         return this;
+  //       }
 
-        // Оба null — ничего не менялось
-        if (p === null && n === null) continue;
+  //       const staticObject = this.getStaticObject(mapX, mapY);
+  //       console.log({ staticObject });
+  //       return staticObject ?? null;
+  //     })
+  //   );
+  //   this.updateFov(prevObjects);
+  //   return this.fovObjects;
+  // }
 
-        // Оба не null: проверяем тип (или другие свойства)
-        if (p.type !== n.type) {
-          dirtyObjects.push({ y, x });
-          continue;
-        }
+  // updateFov(prevObjects) {
+  //   const nextObjects = this.fovObjects.map((row) => [...row]);
 
-        // Если нужно — можно сравнить ещё hpPercent, x,y и т.д.
-      }
-      debugger;
-    }
-    // console.log({ prevObjects, newObjects });
-    // debugger;
-    // const coords = (arr) =>
-    //   arr.map((row) =>
-    //     row.map((obj) => (obj ? { x: obj.x, y: obj.y, type: obj.type } : null))
-    //   );
-    // console.log({
-    //   prev: JSON.stringify(coords(prevObjects)),
-    //   next: JSON.stringify(coords(newObjects)),
-    // });
-    // newFovObjects.forEach((objects)=>{
-    //   objects.forEach((obj)=> )
-    // })
+  //   const dirtyCoords = [];
 
-    // const dirtyObjects = newFovObjects.map((arr1) =>
-    //   arr1.map((obj) => {
-    //     return prevObjects.find(
-    //       (prevObj) => prevObj.x === obj.x && prevObj.y === obj.y
-    //     );
-    //   })
-    // );
-    // debugger;
+  //   const rows = nextObjects.length;
+  //   const cols = nextObjects[0]?.length || 0;
+  //   const centerIndex = this.fovRadius;
+
+  //   const prevList = flattenFov(prevObjects, this.x, this.y);
+  //   const nextList = flattenFov(nextObjects, this.x, this.y);
+  //   debugger;
+  //   dirtyCoords.push([...diffFovLists(prevList, nextList)]);
+
+  //   // for (let y = 0; y < rows; y++) {
+  //   //   for (let x = 0; x < cols; x++) {
+  //   //     const prev = prevObjects[y][x];
+  //   //     const curr = newObjects[y][x];
+
+  //   //     // Проверяем, изменилось ли что-то в этой клетке
+  //   //     const hasChanged = this.hasObjectChanged(prev, curr);
+
+  //   //     if (hasChanged) {
+  //   //       // Преобразуем локальные координаты в глобальные
+  //   //       const globalX = this.x + (x - centerIndex);
+  //   //       const globalY = this.y + (y - centerIndex);
+
+  //   //       dirtyCoords.push({ x: globalX, y: globalY });
+  //   //     }
+  //   //   }
+  //   // }
+  //   debugger;
+  //   // Обновляем только изменившиеся клетки
+  //   dirtyCoords.forEach((coord) => {
+  //     const obj = this.getStaticObject(coord.x, coord.y);
+  //     if (obj && obj.updateNode) {
+  //       obj.updateNode();
+  //     }
+  //   });
+
+  //   console.log("Dirty coordinates:", dirtyCoords);
+  //   return dirtyCoords;
+  // }
+
+  attack(objectType) {
+    const fovObjects = this.getFovObjects();
+    const listObjects = flattenFov(fovObjects);
+    const otherEnemies = listObjects.filter(
+      (obj) => obj instanceof BaseCharacter && obj.type !== this.type
+    );
+    otherEnemies.map((enemy) => {
+      const enemyObj = this.getStaticObject(enemy.x, enemy.y);
+      enemyObj.currentHp -= this.strong;
+      this.pushLevelChanges([enemyObj]);
+    });
   }
 
-  move(keys) {
+  moveKeys(keys) {
     let newX;
     let newY;
     if (keys.w) {
@@ -143,24 +157,107 @@ class BaseCharacter extends GameObject {
     const oldX = this.x;
     const oldY = this.y;
 
-    const prevObj = this.getStaticObject(oldX, oldY);
     const targetObj = this.getStaticObject(targetX, targetY);
 
-    this.setStaticObject(oldX, oldY, targetObj);
-    this.setStaticObject(targetX, targetY, prevObj);
-
-    prevObj.x = targetX;
-    prevObj.y = targetY;
     targetObj.x = oldX;
     targetObj.y = oldY;
 
+    this.prevPosition = { x: this.x, y: this.y };
     this.x = targetX;
     this.y = targetY;
 
-    targetObj.updateNode();
-    prevObj.updateNode();
+    // this.setStaticObject(targetX, targetY, this);
+    // this.setStaticObject(oldX, oldY, targetObj);
 
-    this.updateFovObjects();
+    const resultMoveFrom = this.getStaticObject(oldX, oldY);
+    const resultMoveTo = this.getStaticObject(targetX, targetY);
+    console.log(`Moved from (${oldX}, ${oldY}) to (${targetX}, ${targetY})`);
+
+    // targetObj.updateNode();
+    // prevObj.updateNode();
+    this.pushLevelChanges([targetObj, this]);
+    // debugger;
+
+    // this.updateFovObjects();
+  }
+
+  // moveTo(targetX, targetY) {
+  //   const oldX = this.x;
+  //   const oldY = this.y;
+
+  //   // Получаем PATH объект с целевой позиции
+  //   const pathObj = this.getStaticObject(targetX, targetY);
+
+  //   // Ставим персонажа на новую позицию
+  //   this.setStaticObject(targetX, targetY, this);
+
+  //   // Ставим PATH объект на старую позицию персонажа
+  //   this.setStaticObject(oldX, oldY, pathObj);
+
+  //   // Обновляем координаты
+  //   if (pathObj) {
+  //     pathObj.x = oldX;
+  //     pathObj.y = oldY;
+  //   }
+
+  //   this.x = targetX;
+  //   this.y = targetY;
+
+  //   console.log(`Moved from (${oldX}, ${oldY}) to (${targetX}, ${targetY})`);
+
+  //   this.updateFovObjects();
+  // }
+
+  node() {
+    const objectClassName = this.objectClassName;
+    const hpPercent = (this.currentHp / this.maxHp) * 100;
+    return `
+      <div class="tile" style="
+        width: ${this.tileWidth.toFixed(2)}px;
+        height: ${this.tileHeight.toFixed(2)}px" 
+        data-x="${this.x}" 
+        data-y="${this.y}">
+          <div class="${objectClassName}">
+            <div class="health" style="width: ${hpPercent}%;"></div>
+          </div>
+      </div>`;
+  }
+
+  updateNode() {
+    const currentNode = document.querySelector(
+      `.tileW[data-x="${this.x}"][data-y="${this.y}"]`
+    );
+    if (currentNode) {
+      document.querySelector(
+        `.tileW[data-x="${this.x}"][data-y="${this.y}"]`
+      ).innerHTML = this.node();
+    } else {
+      console.log(`.tileW[data-x="${this.x}"][data-y="${this.y}"]`);
+    }
+  }
+
+  hasObjectChanged(prev, curr) {
+    // Если один объект есть, а другой нет
+    if ((prev === null) !== (curr === null)) {
+      return true;
+    }
+
+    // Оба null — ничего не изменилось
+    if (prev === null && curr === null) {
+      return false;
+    }
+
+    // Оба не null: проверяем тип и другие свойства
+    if (prev.type !== curr.type) {
+      return true;
+    }
+
+    // Проверяем координаты (если объект переместился)
+    if (prev.x !== curr.x || prev.y !== curr.y) {
+      return true;
+    }
+
+    return false;
   }
 }
 

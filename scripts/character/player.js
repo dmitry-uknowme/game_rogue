@@ -6,7 +6,8 @@ class Player extends BaseCharacter {
     tileHeight,
     fovRadius,
     getStaticObject,
-    setStaticObject
+    setStaticObject,
+    pushLevelChanges
   ) {
     super(
       x,
@@ -16,7 +17,8 @@ class Player extends BaseCharacter {
       GameObjectType.PLAYER,
       fovRadius,
       getStaticObject,
-      setStaticObject
+      setStaticObject,
+      pushLevelChanges
     );
     this.x = x;
     this.y = y;
@@ -25,6 +27,7 @@ class Player extends BaseCharacter {
     this.fovRadius = fovRadius;
     this.getStaticObject = getStaticObject;
     this.setStaticObject = setStaticObject;
+    this.pushLevelChanges = pushLevelChanges;
     this.initControlListener();
   }
 
@@ -34,19 +37,26 @@ class Player extends BaseCharacter {
       a: false,
       s: false,
       d: false,
+      space: false,
     };
 
     document.addEventListener("keydown", (e) => {
       if (e.key.toLowerCase() in keys) {
         keys[e.key.toLowerCase()] = true;
       }
-      // if (keys.w) {
-      this.move(keys);
-      // }
+      if (e.code.toLowerCase() in keys) {
+        keys[e.key.toLowerCase()] = true;
+        this.attack();
+      }
+
+      this.moveKeys(keys);
     });
 
     document.addEventListener("keyup", (e) => {
       if (e.key.toLowerCase() in keys) {
+        keys[e.key.toLowerCase()] = false;
+      }
+      if (e.code.toLowerCase() in keys) {
         keys[e.key.toLowerCase()] = false;
       }
     });
