@@ -141,7 +141,19 @@
     <div class="cl"></div>
     <!--h1>Инвентарь</h1>
 		<div class="inventory-box"><div class="inventory"></div></div-->
-    <script src="./scripts/game.js"></script>
+
+    <!-- Utils -->
+    <script src="./scripts/utils.js"></script>
+
+    <!-- Game module -->
+    <script src="./scripts/game/game_object.js"></script>
+    <script src="./scripts/game/game_level.js"></script>
+    <script src="./scripts/game/game.js"></script>
+
+    <!-- Character module -->
+    <script src="./scripts/character/base_character.js"></script>
+    <script src="./scripts/character/enemy.js"></script>
+    <script src="./scripts/character/player.js"></script>
     <script>
       var game = new Game();
       game.init();
