@@ -25,27 +25,38 @@ class GameLevelSettings {
 class GameLevel {
   constructor(
     gameBoxNode,
-    staticObjects,
-    gameplayObjects,
+    // staticObjects,
+    // gameplayObjects,
+    onWin,
+    onLose,
+    updateEnemiesInfo,
     width = 1024,
     height = 640,
     tileXCount = 40,
-    tileYCount = 24
+    tileYCount = 24,
+    settings = new GameLevelSettings()
   ) {
     this.gameBoxNode = gameBoxNode;
-    this.staticObjects = staticObjects;
-    this.gameplayObjects = gameplayObjects;
+    this.staticObjects = [];
+    this.gameplayObjects = [];
     this.width = width;
     this.height = height;
     this.tileXCount = tileXCount;
     this.tileYCount = tileYCount;
     this.tileWidth = width / tileXCount;
     this.tileHeight = height / tileYCount;
-    this.settings = new GameLevelSettings();
+    this.onWin = onWin;
+    this.onLose = onLose;
+    this.settings = settings;
     this.changesStack = [];
+    this.isRunning = false;
+    this.lastUpdateTime = null;
+    this.updateEnemiesInfo = updateEnemiesInfo;
   }
 
   run() {
+    if (!this.isRunning) return;
+
     const now = performance.now();
     const delta = now - (this.lastUpdateTime || 0);
 
@@ -60,13 +71,39 @@ class GameLevel {
     requestAnimationFrame(this.run.bind(this));
   }
 
+  start() {
+    this.init();
+    this.isRunning = true;
+    this.lastUpdateTime = null;
+    this.run();
+    const enemiesLeft = this.gameplayObjects.filter((e) => e instanceof Enemy);
+    this.updateEnemiesInfo(enemiesLeft.length);
+  }
+
+  stop() {
+    this.resetObjects();
+    this.isRunning = false;
+  }
+
+  restart() {
+    this.stop();
+    document.querySelector(".field").innerHTML = "";
+    setTimeout(() => {
+      this.start();
+    }, 500);
+  }
+
+  resetObjects() {
+    this.changesStack = [];
+
+    this.gameplayObjects = this.gameplayObjects.map((obj) =>
+      obj instanceof BaseCharacter ? obj.stop() : obj
+    );
+    this.gameplayObjects = [];
+    this.staticObjects = [];
+  }
+
   init() {
-    // this.gameplayObjects = Array.from({ length: this.tileYCount }, () =>
-    //   Array.from({ length: this.tileXCount }, () => null)
-    // );
-    // this.staticObjects = Array.from({ length: this.tileYCount }, () =>
-    //   Array.from({ length: this.tileXCount }, () => null)
-    // );
     this.renderWalls();
     this.renderRooms();
     this.renderPaths();
@@ -75,8 +112,6 @@ class GameLevel {
     this.renderPlayer();
     GameLevelGenerator.connectPaths(this.staticObjects);
     this.updateStatic();
-
-    // enemies.map((enemy) => enemy.autoMove());
   }
 
   updateChanged() {
@@ -101,6 +136,18 @@ class GameLevel {
           GameObjectType.PATH
         );
         this.pushChanges([pathObject]);
+
+        this.gameplayObjects = this.gameplayObjects.filter(
+          (eObj) => !(eObj instanceof Enemy && eObj.id === obj.id)
+        );
+        const enemiesLeft = this.gameplayObjects.filter(
+          (e) => e instanceof Enemy
+        );
+        this.updateEnemiesInfo(enemiesLeft.length);
+        if (!enemiesLeft?.length) {
+          this.stop();
+          this.onWin();
+        }
       }
     } else if (obj instanceof Player) {
       if (obj.currentHp <= 0) {
@@ -112,7 +159,15 @@ class GameLevel {
           GameObjectType.PATH
         );
         this.pushChanges([pathObject]);
-        // this.init();
+        // const newGameplayObjects = this.gameplayObjects.filter(
+        //   (eObj) => !(eObj instanceof Player)
+        // );
+        // this.gameplayObjects = this.gameplayObjects.map((obj) =>  instanceof Enemy && eObj.id === obj.id? obj.stop(): );
+        // this.gameplayObjects = [];
+        this.stop();
+        this.onLose();
+        // this.stop();
+        // Game.showLoseOverlay(() => this.restart());
       }
     }
   }
@@ -303,7 +358,6 @@ class GameLevel {
   }
 
   renderEnemies(withAutoMove = true) {
-    const enemies = [];
     const count = this.settings.ENEMIES_COUNT_MIN;
 
     const spawnCoords = GameLevelGenerator.getRandomSpawnCoordsWithOffset(
@@ -314,7 +368,7 @@ class GameLevel {
       5
     );
 
-    spawnCoords.forEach((coord) => {
+    spawnCoords.forEach((coord, index) => {
       const obj = new Enemy(
         coord.x,
         coord.y,
@@ -326,12 +380,14 @@ class GameLevel {
         this.pushChanges.bind(this)
       );
 
-      enemies.push(obj);
+      obj.id = index;
+      this.gameplayObjects.push(obj);
       this.setStaticObject(obj.x, obj.y, obj);
       if (withAutoMove) {
         obj.autoMove();
       }
     });
+    this.updateEnemiesInfo(spawnCoords.length);
   }
 
   renderPlayer() {
@@ -340,8 +396,8 @@ class GameLevel {
     while (placed < count) {
       const y = randomInteger(0, this.tileYCount - 1);
       const x = randomInteger(0, this.tileXCount - 1);
-      const current = this.getStaticObject(x, y);
-      if (current.type === GameObjectType.PATH) {
+      const obj = this.getStaticObject(x, y);
+      if (obj.type === GameObjectType.PATH) {
         const obj = new Player(
           x,
           y,
@@ -352,6 +408,7 @@ class GameLevel {
           this.setStaticObject.bind(this),
           this.pushChanges.bind(this)
         );
+        this.gameplayObjects.push(obj);
         this.setStaticObject(x, y, obj);
         // const tile = this.gameBoxNode.childNodes[y * this.tileXCount + x];
         // tile.className = obj.getObjectClassName();

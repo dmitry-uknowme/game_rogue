@@ -25,6 +25,7 @@ class BaseCharacter extends GameObject {
     this.currentHp = this.maxHp;
     this.prevPosition = { x, y };
     this.fovObjects = [];
+    this.isRunning = true;
     // this.fovObjects = this.getFovObjects();
   }
 
@@ -117,8 +118,13 @@ class BaseCharacter extends GameObject {
   //   console.log("Dirty coordinates:", dirtyCoords);
   //   return dirtyCoords;
   // }
+  stop() {
+    this.isRunning = false;
+  }
 
   attack(objectType) {
+    if (!this.isRunning) return;
+    if (this.currentHp <= 0) return;
     const fovObjects = this.getFovObjects();
     const listObjects = flattenFov(fovObjects);
     const otherEnemies = listObjects.filter(
@@ -132,6 +138,8 @@ class BaseCharacter extends GameObject {
   }
 
   applyEffect(obj) {
+    if (!this.isRunning) return;
+    if (this.currentHp <= 0) return;
     if (obj.type === GameObjectType.EFFECT_HEAL) {
       const newHp = Math.min(this.currentHp + 5, this.maxHp);
       this.currentHp = newHp;
@@ -155,6 +163,8 @@ class BaseCharacter extends GameObject {
   }
 
   moveKeys(keys) {
+    if (!this.isRunning) return;
+    if (this.currentHp <= 0) return;
     let newX;
     let newY;
     if (keys.w) {

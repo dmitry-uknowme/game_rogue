@@ -40,27 +40,62 @@ class Player extends BaseCharacter {
       space: false,
     };
 
-    document.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() in keys) {
-        keys[e.key.toLowerCase()] = true;
-      }
-      if (e.code.toLowerCase() in keys) {
-        keys[e.key.toLowerCase()] = true;
-        this.attack();
-      }
+    const codeToKey = {
+      KeyW: "w",
+      KeyA: "a",
+      KeyS: "s",
+      KeyD: "d",
+      Space: "space",
+    };
 
-      this.moveKeys(keys);
+    document.addEventListener("keydown", (e) => {
+      const key = codeToKey[e.code];
+      if (key) {
+        keys[key] = true;
+        if (key === "space") {
+          this.attack();
+        }
+        this.moveKeys(keys);
+      }
     });
 
     document.addEventListener("keyup", (e) => {
-      if (e.key.toLowerCase() in keys) {
-        keys[e.key.toLowerCase()] = false;
-      }
-      if (e.code.toLowerCase() in keys) {
-        keys[e.key.toLowerCase()] = false;
+      const key = codeToKey[e.code];
+      if (key) {
+        keys[key] = false;
       }
     });
   }
+
+  // initControlListener() {
+  //   const keys = {
+  //     KeyW: false,
+  //     KeyA: false,
+  //     KeyS: false,
+  //     KeyD: false,
+  //     Space: false,
+  //   };
+
+  //   document.addEventListener("keydown", (e) => {
+  //     debugger;
+  //     if (e.code in keys) {
+  //       debugger;
+  //       keys[e.code] = true;
+
+  //       if (e.code === "Space") {
+  //         this.attack(); // только по Space
+  //       }
+
+  //       this.moveKeys(keys);
+  //     }
+  //   });
+
+  //   document.addEventListener("keyup", (e) => {
+  //     if (e.code in keys) {
+  //       keys[e.code] = false;
+  //     }
+  //   });
+  // }
 }
 
 window.Player = Player;

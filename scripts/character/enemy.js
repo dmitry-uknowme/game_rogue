@@ -28,11 +28,10 @@ class Enemy extends BaseCharacter {
     this.getStaticObject = getStaticObject;
     this.setStaticObject = setStaticObject;
     this.pushLevelChanges = pushLevelChanges;
-    // this.autoMove();
+    this.moveInterval = null;
   }
 
   autoMove() {
-    // const moveDirection = Math.random() > 0.5 ? "X" : "Y";
     const fovRadius = this.fovRadius;
     const fovObjects = this.getFovObjects();
     const moveDirections = {
@@ -53,10 +52,9 @@ class Enemy extends BaseCharacter {
         isMovable: fovObjects[1][2]?.type === GameObjectType.PATH,
       },
     };
-    // const listObjects = flattenFov(fovObjects);
-    let moveInterval = setInterval(() => {
-      if (this.currentHp < 0) {
-        clearInterval(moveInterval);
+    this.moveInterval = setInterval(() => {
+      if (this.currentHp <= 0) {
+        clearInterval(this.moveInterval);
         return;
       }
       const moveList = Object.keys(moveDirections)
@@ -68,14 +66,13 @@ class Enemy extends BaseCharacter {
       this.moveTo(randomObj.x, randomObj.y);
       this.attack();
     }, 1000);
-    // setTimeout(() => {
-    //   this.moveTo(this.x + 1, this.y);
-    // }, 5000);
-    // setInterval(() => {
-    //   if (moveDirection === "X") {
-    //     this.moveTo(this.x + 1, this.y);
-    //   }
-    // }, 500);
+  }
+
+  stop() {
+    if (this.moveInterval) {
+      clearInterval(this.moveInterval);
+      this.moveInterval = null;
+    }
   }
 }
 
